@@ -7,9 +7,16 @@ ACTION=$2
 # Information about the service. Set by parse_config
 S_NAME=""
 S_SOURCE=""
+S_IMAGE=""
 S_PORTMAP=""
 S_OPTIONS=""
 
+_podman () {
+    set -x
+    podman $@
+    set +x
+}
+alias podman='_podman'
 
 if [ -z $SERVICE ] || [ -z $ACTION ]; then
     echo "Usage: ${0} <service> <action>"
@@ -21,8 +28,10 @@ parse_config () {
         case $name in
         NAME) S_NAME=$val;;
         SOURCE) S_SOURCE=$val;;
+        IMAGE) S_IMAGE=$val;;
         PORTMAP) S_PORTMAP=$val;;
         OPTIONS) S_OPTIONS=$val;;
+
         '#') ;;
         *)
             echo "Invalid line: " $name $val
@@ -32,22 +41,26 @@ parse_config () {
     done < services/$SERVICE
 }
 
-#echo $S_NAME , $S_SOURCE , $S_PORTMAP , $S_OPTIONS
-
 bringup () {
-    set -x
-    podman build --tag "jamsandwich_img_${SERVICE}" $S_SOURCE
-    set +x
+    tag="jamsandwich_img_${SERVICE}"
+
+    if [ $S_IMAGE != "" ]; then
+        podman tag `podman pull $S_IMAGE` $tag
+    else
+        podman build --tag $tag $S_SOURCE
+    fi
 }
 
 start () {
-    set -x
     podman run --rm -d \
         --name "jamsandwich_con_${SERVICE}" \
         --mount type=bind,source=persist/$SERVICE,destination=/persist \
         -p $S_PORTMAP \
         "jamsandwich_img_${SERVICE}" $S_OPTIONS
-    set +x
+}
+
+stop () {
+    podman stop "jamsandwich_con_${SERVICE}"
 }
 
 parse_config $SERVICE
