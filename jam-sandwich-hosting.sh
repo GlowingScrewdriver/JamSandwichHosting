@@ -10,7 +10,7 @@ PERSIST_DIR="persist/${SERVICE}"
 case "$ACTION" in
 bringup)
     mkdir -p "$PERSIST_DIR"
-    sh -e "${S_DIR}/functions.sh" bringup "$PERSIST_DIR"
+    sh -e "${S_DIR}/functions.sh" bringup "$PERSIST_DIR" "$S_DIR"
     ;;
 start)
     sh -e "${S_DIR}/functions.sh" start "$PERSIST_DIR" &
@@ -20,6 +20,7 @@ stop)
     pat="${SERVICE} "
     PID=`sed -ne "s/${pat}//p" pid`
     kill $PID
+    sed -e "/${pat}/d" -i pid
     ;;
 *)
     echo "Invalid action: \`${ACTION}\`"
