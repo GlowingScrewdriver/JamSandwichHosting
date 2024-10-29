@@ -3,6 +3,7 @@
 ## Quick links:
 * [File Browser](/filebrowser/)
 * [Caldav/Carddav Server](/radicale/)
+* [Note-taking App](/memos/)
 
 ## About this Website
 Everything you see on this website is running from a laptop in my house. You
