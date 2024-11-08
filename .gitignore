@@ -1,3 +1,9 @@
+# Working and installation directories
 persist
+# PIDs of running services
 pid
+# Site-specific configuration
 config
+
+# Generated from Markdown
+pages/*.html
