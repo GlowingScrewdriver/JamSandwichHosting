@@ -1,0 +1,27 @@
+radicale:
+    pm: pip
+    package: radicale
+    args: "-C {config}/config --auth-htpasswd-filename {config}/users --storage-filesystem-folder {data}/collections"
+
+caddy:
+    pm: static_bin
+    package: caddy
+    args: "run --config {config}/Caddyfile"
+    env:
+        url: https://caddyserver.com/api/download?os=linux&arch=amd64
+
+memos:
+    pm: static_bin
+    package: memos
+    args: "--data {data}"
+    env:
+        url: https://github.com/GlowingScrewdriver/memos/releases/download/v0.23.0%2Bcustom-subpath/memos_v0.23.0+custom-subpath_linux_amd64.tar.gz
+        extractor: tar -zx
+
+ngrok:
+    pm: static_bin
+    package: ngrok
+    args: start --all --config {config}/ngrok.yml
+    env:
+        url: https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
+        extractor: tar -zx

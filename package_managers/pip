@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# Package manager script for Python Pip
+# Part of Jam Sandwich Hosting
+
+alias vPIP="${JSH_INSTALL}/venv/bin/pip3"
+alias vPYTHON="${JSH_INSTALL}/venv/bin/python3"
+
+action="$1"
+package="$2"
+
+case "$action" in
+bringup)
+    /usr/bin/python3 -m venv "${JSH_INSTALL}"/venv
+    vPIP install "$package"
+    ;;
+start)
+    set -x
+    vPYTHON -m "$package" ${JSH_ARGS}
+    set +x
+    ;;
+esac

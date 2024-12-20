@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# Package manager script to download static binaries
+# Part of Jam Sandwich Hosting
+
+action="$1"
+package="$2"
+
+case "$action" in
+bringup)
+    extract_cmd="${JSH_ENV_extractor}"
+    if [ "$extract_cmd" = "" ]; then
+        /usr/bin/wget "${JSH_ENV_url}" -O ./"$package"
+    else
+        /usr/bin/wget "${JSH_ENV_url}" -O - | $extract_cmd > ./"$package"
+    fi
+    chmod +x ./"$package"
+    ;;
+start)
+    ./"$package" ${JSH_ARGS}
+    ;;
+esac
