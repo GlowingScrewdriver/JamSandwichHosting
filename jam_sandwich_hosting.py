@@ -5,6 +5,7 @@ from os import set_inheritable, getcwd, makedirs, path, kill, remove
 from subprocess import Popen
 import yaml
 from signal import SIGINT
+from shutil import make_archive
 
 
 ## Default constants and macros
@@ -164,7 +165,13 @@ def stop (srv):
     kill (int (pid), SIGINT)
 
 
-# Entry point
+## Backup
+
+def backup ():
+    make_archive ("./backup", format = "tar", base_dir = DATA_DIR(""))
+
+
+## Entry point
 
 def main ():
     services = parse_services (SERVICES_FILE)
@@ -190,6 +197,8 @@ def main ():
     elif action == "stop":
         srv = cmd_args.pop (0)
         stop (services [srv])
+    elif action == "backup":
+        backup ()
     else:
         raise Exception (f"Invalid action: {action}")
 
