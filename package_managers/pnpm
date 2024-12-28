@@ -1,0 +1,18 @@
+#!/bin/sh
+
+# Package manager script for PNPM
+# Part of Jam Sandwich Hosting
+
+action="$1"
+package="$2"
+
+case "$action" in
+bringup)
+    pnpm i "$package"
+    ;;
+start)
+    set -x
+    pnpm exec thumbsup ${JSH_ARGS}
+    set +x
+    ;;
+esac
