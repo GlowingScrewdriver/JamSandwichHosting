@@ -140,12 +140,12 @@ def start (srv):
     pm_script = PACKAGE_MANAGER (srv ["pm"])
 
     if srv.get("static"):
+        pidfile_opt = {}
+    else:
         pidfile = PID_FILE (srv_name)
         if path.exists (pidfile):
             raise Exception (f"{srv_name}: already running")
         pidfile_opt = {"pidfile": pidfile}
-    else:
-        pidfile_opt = {}
 
     cmd_run (
         (pm_script, "start", srv_name),
@@ -155,7 +155,6 @@ def start (srv):
         **pidfile_opt,
     )
 
-
 def stop (srv):
     """
     Stop service `srv`.
@@ -164,8 +163,11 @@ def stop (srv):
     by `parse_services`).
     """
     srv_name = srv ["name"]
-    pidfile = PID_FILE (srv_name)
+    if srv.get ("static"):
+        print (f"Service {srv_name} is a static service")
+        return
 
+    pidfile = PID_FILE (srv_name)
     if not path.exists (pidfile):
         raise Exception (f"{srv_name}: not running")
 

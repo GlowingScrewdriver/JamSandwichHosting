@@ -25,3 +25,8 @@ ngrok:
     env:
         url: https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
         extractor: tar -zx
+
+sigal:
+    pm: pip
+    package: sigal
+    args: "build -c {config}/sigal.conf.py {config}/input {data}/output"
