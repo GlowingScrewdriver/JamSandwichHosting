@@ -1,7 +1,7 @@
 #!/bin/env python3
 
 from sys import stdout, argv
-from os import set_inheritable, getcwd, makedirs, path, kill, remove
+from os import set_inheritable, getcwd, makedirs, path, kill, remove, environ
 from subprocess import Popen
 import yaml
 from signal import SIGINT
@@ -46,7 +46,13 @@ def cmd_run (cmd, workdir, *, pidfile = None, logfile = None, wait = False, env 
         out = open (logfile, "a")
         set_inheritable (out.fileno (), True)
 
-    proc = Popen (cmd, cwd = workdir, stdout = out, stderr = out, env = env)
+    proc = Popen (
+        cmd,
+        cwd = workdir,
+        stdout = out,
+        stderr = out,
+        env = {**env, "PATH": environ ["PATH"]},
+    )
     if wait:
         proc.wait ()
 
@@ -126,23 +132,27 @@ def start (srv):
     Start service `srv`.
 
     `srv` is a value in the dict returned
-    by `parse_services`).
+    by `parse_services`.
     """
     srv_name = srv ["name"]
-    pidfile = PID_FILE (srv_name)
     logfile = LOG_FILE (srv_name)
     persist_dir = PERSIST_DIR (srv_name)
     pm_script = PACKAGE_MANAGER (srv ["pm"])
 
-    if path.exists (pidfile):
-        raise Exception (f"{srv_name}: already running")
+    if srv.get("static"):
+        pidfile = PID_FILE (srv_name)
+        if path.exists (pidfile):
+            raise Exception (f"{srv_name}: already running")
+        pidfile_opt = {"pidfile": pidfile}
+    else:
+        pidfile_opt = {}
 
     cmd_run (
         (pm_script, "start", srv_name),
         persist_dir,
-        pidfile = pidfile,
         logfile = logfile,
         env = env_setup (srv),
+        **pidfile_opt,
     )
 
 
