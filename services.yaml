@@ -29,4 +29,16 @@ ngrok:
 sigal:
     pm: pip
     package: sigal
-    args: "build -c {config}/sigal.conf.py {config}/input {data}/output"
+    args: "build -c {config}/sigal.conf.py {export}/digicam-final1 {data}/output"
+    export:
+        - ["{data}/output", "sigal"]
+
+rclone:
+    pm: static_bin
+    package: rclone
+    args: "--config {config}/rclone.conf mount master: {data}/"
+    env:
+        url: https://downloads.rclone.org/rclone-current-linux-amd64.zip
+        extractor: busybox unzip -p - */rclone
+    export:
+        - ["{data}/nas/", "nas"]

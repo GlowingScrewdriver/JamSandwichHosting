@@ -16,7 +16,7 @@ PACKAGE_MANAGER = lambda pm: f"{ROOTDIR}/package_managers/{pm}"
 PERSIST_DIR = lambda srv: f"{ROOTDIR}/install/{srv}/"
 CONFIG_DIR = lambda srv: f"{ROOTDIR}/config/{srv}"
 DATA_DIR = lambda srv: f"{ROOTDIR}/data/{srv}"
-EXPORT_DIR = lambda srv: f"{ROOTDIR}/export/{srv}"
+EXPORT_DIR = f"{ROOTDIR}/export/"
 LOG_FILE = lambda srv: f"{ROOTDIR}/log/{srv}"
 PID_FILE = lambda srv: f"{ROOTDIR}/pid/{srv}"
 SKELETON_FILES = (
@@ -24,7 +24,7 @@ SKELETON_FILES = (
     DATA_DIR (""),
     LOG_FILE (""),
     PID_FILE (""),
-    EXPORT_DIR (""),
+    EXPORT_DIR,
 )
 REQUIRED_FILES = (
     CONFIG_DIR (""),
@@ -79,7 +79,7 @@ def env_setup (srv):
         "JSH_INSTALL": persist,
         "JSH_DATA": data,
         "JSH_CONFIG": config,
-        "JSH_ARGS": srv ["args"].format (config = config, data = data, persist = persist),
+        "JSH_ARGS": srv ["args"].format (config = config, data = data, persist = persist, export = EXPORT_DIR),
         **{
             f"JSH_ENV_{var}": val
             for var, val in env.items ()
@@ -117,9 +117,8 @@ def bringup (srv: dict):
     persist_dir = PERSIST_DIR (srv_name)
     data_dir = DATA_DIR (srv_name)
     config_dir = CONFIG_DIR (srv_name)
-    export_dir = EXPORT_DIR (srv_name)
 
-    for diry in (persist_dir, data_dir, export_dir):
+    for diry in (persist_dir, data_dir):
         try: makedirs (diry)
         except FileExistsError: pass
 
@@ -128,12 +127,11 @@ def bringup (srv: dict):
     for src, name in export_dirs:
         symlink (
             src.format (config = config_dir, data = data_dir, install = persist_dir),
-            f"{export_dir}/{name}"
+            f"{EXPORT_DIR}/{name}"
         )
 
-
     cmd_run (
-        (pm_script, "bringup", srv_name),
+        (pm_script, "bringup", srv ["package"]),
         persist_dir,
         wait = True,
         env = env_setup (srv)
@@ -160,7 +158,7 @@ def start (srv):
         pidfile_opt = {"pidfile": pidfile}
 
     cmd_run (
-        (pm_script, "start", srv_name),
+        (pm_script, "start", srv ["package"]),
         persist_dir,
         logfile = logfile,
         env = env_setup (srv),
