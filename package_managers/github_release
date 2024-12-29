@@ -1,0 +1,62 @@
+#!/bin/env python3
+
+# Package manager script for Github Releases
+# Part of Jam Sandwich Hosting
+
+import json
+from urllib import request
+import re
+from sys import argv
+from os import environ, execl
+import shutil
+
+def install_latest_release (repo, asset_regex):
+    print (f"Repo: {repo}", f"Asset: {asset_regex}", sep = "\n")
+
+    url = f"https://api.github.com/repos/{repo}/releases/latest"
+    print (f"Calling {url}")
+    with request.urlopen (url) as res:
+        release = json.load (res)
+
+    # Don't do anything if the latest version is installed
+    rel_version = release ["tag_name"]
+    try:
+        with open (f"version", "r") as version_file:
+            cur_version = version_file.read ()
+            if rel_version == cur_version:
+                print (f"Latest version already installed")
+                return
+    except FileNotFoundError:
+        pass
+    with open ("version", "w") as version_file:
+        version_file.write (rel_version)
+
+    # Get the asset specified by the service
+    asset = None
+    for ass in release ["assets"]:
+        if re.match (asset_regex, ass ["name"]):
+            asset = ass
+    if asset is None:
+        print (f"Asset {asset_regex} not found in {repo}")
+        return
+
+    url, name = asset ["browser_download_url"], asset ["name"]
+    print (f"Downloading {url} as {name}")
+    with request.urlopen (url) as res:
+        with open (name, "wb") as asset_f:
+            asset_f.write (res.read ())
+
+    print (f"Extracting {name}")
+    shutil.unpack_archive (name)
+
+
+def start (repo, argstr):
+    execl (repo, repo, *argstr.split (" "))
+
+if __name__ == "__main__":
+    action, package = argv [1:3]
+
+    if action == "bringup":
+        install_latest_release (package, environ ["JSH_ENV_asset-regex"])
+    elif action == "start":
+        start (package.split ("/")[1], environ ["JSH_ARGS"])

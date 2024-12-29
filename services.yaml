@@ -42,3 +42,10 @@ rclone:
         extractor: busybox unzip -p - */rclone
     export:
         - ["{data}/nas/", "nas"]
+
+filebrowser:
+    pm: github_release
+    package: filebrowser/filebrowser
+    args: "-d {data}/filebrowser.db -r {export}/nas"
+    env:
+        asset-regex: "linux-amd64.*"
