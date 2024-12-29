@@ -1,7 +1,7 @@
 #!/bin/env python3
 
 from sys import stdout, argv
-from os import set_inheritable, getcwd, makedirs, path, kill, remove, environ
+from os import set_inheritable, getcwd, makedirs, path, kill, remove, environ, symlink
 from subprocess import Popen
 import yaml
 from signal import SIGINT
@@ -16,6 +16,7 @@ PACKAGE_MANAGER = lambda pm: f"{ROOTDIR}/package_managers/{pm}"
 PERSIST_DIR = lambda srv: f"{ROOTDIR}/install/{srv}/"
 CONFIG_DIR = lambda srv: f"{ROOTDIR}/config/{srv}"
 DATA_DIR = lambda srv: f"{ROOTDIR}/data/{srv}"
+EXPORT_DIR = lambda srv: f"{ROOTDIR}/export/{srv}"
 LOG_FILE = lambda srv: f"{ROOTDIR}/log/{srv}"
 PID_FILE = lambda srv: f"{ROOTDIR}/pid/{srv}"
 SKELETON_FILES = (
@@ -23,6 +24,7 @@ SKELETON_FILES = (
     DATA_DIR (""),
     LOG_FILE (""),
     PID_FILE (""),
+    EXPORT_DIR (""),
 )
 REQUIRED_FILES = (
     CONFIG_DIR (""),
@@ -115,10 +117,20 @@ def bringup (srv: dict):
     persist_dir = PERSIST_DIR (srv_name)
     data_dir = DATA_DIR (srv_name)
     config_dir = CONFIG_DIR (srv_name)
+    export_dir = EXPORT_DIR (srv_name)
 
-    for diry in (persist_dir, data_dir):
+    for diry in (persist_dir, data_dir, export_dir):
         try: makedirs (diry)
         except FileExistsError: pass
+
+    export_dirs = srv.get ("export")
+    if export_dirs is None: export_dirs = ()
+    for src, name in export_dirs:
+        symlink (
+            src.format (config = config_dir, data = data_dir, install = persist_dir),
+            f"{export_dir}/{name}"
+        )
+
 
     cmd_run (
         (pm_script, "bringup", srv_name),
@@ -154,7 +166,6 @@ def start (srv):
         env = env_setup (srv),
         **pidfile_opt,
     )
-
 
 def stop (srv):
     """
