@@ -32,7 +32,6 @@ REQUIRED_FILES = (
     SERVICES_FILE,
 )
 
-
 ## Program execution
 
 def cmd_run (cmd, workdir, *, pidfile = None, logfile = None, wait = False, env = {}):
@@ -68,8 +67,7 @@ def env_setup (srv):
     from service definition `srv` (dict).
     These variables are consumed by package manager scripts.
     """
-    env = srv.get ("env")
-    if env is None: env = {}
+    env = srv ["env"]
     name = srv ["name"]
 
     config = CONFIG_DIR (name)
@@ -89,10 +87,52 @@ def env_setup (srv):
 
 ## Service management
 
+service_key_shapes = {
+    # Mapping: key name -> shape
+    # All valid keys are listed here
+    "pm": "",
+    "package": "",
+    "args": "",
+    "env": {"": ""},
+    "export": [["", ""]],
+}
+service_key_defaults = {
+    # Mapping: key name -> default value
+    # Only optional keys are listed here
+    "args": "",
+    "env": {},
+    "export": [],
+}
+
+def verify_shape (obj, shape):
+    """
+    Recursively verify the shape of `obj`
+    against `shape`
+    """
+    if type (obj) != type (shape):
+        return False
+
+    if isinstance (obj, list) or isinstance (obj, tuple):
+        if len (obj) != len (shape):
+            return False
+        for o, s in zip (obj, shape):
+            if not verify_shape (o, s):
+                return False
+
+    elif isinstance (obj, dict):
+        if not verify_shape (obj.items (), shape.items ()):
+            return False
+
+    return True
+
 def parse_services (srv_filename: str):
     """
     Parse and preprocess service definitions
     from a file (typically `services.yaml`).
+
+    The shape of each service is verified using
+    `service_key_shapes` and default values
+    plugged from `service_key_defaults`.
 
     The returned dict is a mapping from service
     name to service defintion; the service
@@ -100,8 +140,28 @@ def parse_services (srv_filename: str):
     """
     with open (srv_filename) as srv_file:
         services = yaml.safe_load (srv_file)
+
     for name, srv in services.items ():
+        # Shape validation
+        for key, val in srv.items ():
+            shape = service_key_shapes.get (key)
+            if shape is None:
+                raise Exception (f"Service {name}: Invalid key: {key}")
+            if not verify_shape (val, shape):
+                raise Exception (f"Service {name}: Invalid value for key {key}")
+
+        # Default and missing values
+        for key in service_key_shapes:
+            if key in srv:
+                continue
+            dflt = service_key_defaults.get (key)
+            if dflt is None:
+                raise Exception (f"Service {name}: Key {key} is missing")
+            else:
+                srv [key] = dflt.copy ()
+
         srv ["name"] = name
+
     return services
 
 def bringup (srv: dict):
@@ -122,8 +182,7 @@ def bringup (srv: dict):
         try: makedirs (diry)
         except FileExistsError: pass
 
-    export_dirs = srv.get ("export")
-    if export_dirs is None: export_dirs = ()
+    export_dirs = srv ["export"]
     for src, name in export_dirs:
         symlink (
             src.format (config = config_dir, data = data_dir, install = persist_dir),
@@ -149,7 +208,7 @@ def start (srv):
     persist_dir = PERSIST_DIR (srv_name)
     pm_script = PACKAGE_MANAGER (srv ["pm"])
 
-    if srv.get("static"):
+    if srv ["static"]:
         pidfile_opt = {}
     else:
         pidfile = PID_FILE (srv_name)
@@ -173,7 +232,7 @@ def stop (srv):
     by `parse_services`).
     """
     srv_name = srv ["name"]
-    if srv.get ("static"):
+    if srv ["static"]:
         print (f"Service {srv_name} is a static service")
         return
 
@@ -221,6 +280,8 @@ def main ():
         stop (services [srv])
     elif action == "backup":
         backup ()
+    elif action == "dump-config":
+        print (yaml.dump (services))
     else:
         raise Exception (f"Invalid action: {action}")
 
