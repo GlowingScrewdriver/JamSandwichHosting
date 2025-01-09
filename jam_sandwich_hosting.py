@@ -6,6 +6,7 @@ from subprocess import Popen
 import yaml
 from signal import SIGINT
 from shutil import make_archive
+import shlex
 
 
 ## Default constants and macros
@@ -77,11 +78,20 @@ def env_setup (srv):
         "JSH_INSTALL": persist,
         "JSH_DATA": data,
         "JSH_CONFIG": config,
-        "JSH_ARGS": srv ["args"].format (config = config, data = data, persist = persist, export = EXPORT_DIR),
+        "JSH_ARGS": srv ["args"].format (**format_args (srv)),
         **{
             f"JSH_ENV_{var}": val
             for var, val in env.items ()
         },
+    }
+
+def format_args (srv):
+    srv_name = srv ["name"]
+    return {
+        "persist": PERSIST_DIR (srv_name),
+        "config": CONFIG_DIR (srv_name),
+        "data": DATA_DIR (srv_name),
+        "export": EXPORT_DIR,
     }
 
 
@@ -95,6 +105,7 @@ service_key_shapes = {
     "args": "",
     "env": {"": ""},
     "export": [["", ""]],
+    "periodic": "",
 }
 service_key_defaults = {
     # Mapping: key name -> default value
@@ -102,12 +113,13 @@ service_key_defaults = {
     "args": "",
     "env": {},
     "export": [],
+    "periodic": "",
 }
 
 def verify_shape (obj, shape):
     """
     Recursively verify the shape of `obj`
-    against `shape`
+    against `shape`.
     """
     if type (obj) != type (shape):
         return False
@@ -184,10 +196,13 @@ def bringup (srv: dict):
 
     export_dirs = srv ["export"]
     for src, name in export_dirs:
-        symlink (
-            src.format (config = config_dir, data = data_dir, install = persist_dir),
-            f"{EXPORT_DIR}/{name}"
-        )
+        try:
+            symlink (
+                src.format (**format_args (srv)),
+                f"{EXPORT_DIR}/{name}"
+            )
+        except FileExistsError:
+            pass
 
     cmd_run (
         (pm_script, "bringup", srv ["package"]),
@@ -208,7 +223,10 @@ def start (srv):
     persist_dir = PERSIST_DIR (srv_name)
     pm_script = PACKAGE_MANAGER (srv ["pm"])
 
-    if srv ["static"]:
+    if not path.exists (persist_dir):
+        raise Exception (f"{srv_name}: not installed")
+
+    if srv.get ("static"):
         pidfile_opt = {}
     else:
         pidfile = PID_FILE (srv_name)
@@ -232,7 +250,7 @@ def stop (srv):
     by `parse_services`).
     """
     srv_name = srv ["name"]
-    if srv ["static"]:
+    if srv.get ("static"):
         print (f"Service {srv_name} is a static service")
         return
 
@@ -246,10 +264,32 @@ def stop (srv):
     kill (int (pid), SIGINT)
 
 
-## Backup
+## Backup and periodic maintenance
 
 def backup ():
     make_archive ("./backup", format = "tar", base_dir = DATA_DIR(""))
+
+def periodic (srv: dict):
+    """
+    Run periodic maintenance jobs:
+    * Service bringup
+    * Periodic actions defined by services
+    """
+    srv_name = srv ["name"]
+    pm_script = PACKAGE_MANAGER (srv ["pm"])
+    persist_dir = PERSIST_DIR (srv_name)
+
+    if not path.exists (persist_dir):
+        raise Exception (f"{srv_name}: not installed")
+
+    cmd = srv ["periodic"]
+    if cmd:
+        cmd_run (
+            shlex.split (cmd.format (**format_args (srv))),
+            persist_dir,
+            env = env_setup (srv),
+            wait = True
+        )
 
 
 ## Entry point
@@ -268,20 +308,34 @@ def main ():
         except FileExistsError:
             pass
 
+    service_actions = {
+        # Per-service actions and their handler functions
+        "bringup": bringup,
+        "start": start,
+        "stop": stop,
+        "periodic": periodic,
+    }
+
     action = cmd_args.pop (0)
-    if action == "bringup":
-        srv = cmd_args.pop (0)
-        bringup (services [srv])
-    elif action == "start":
-        srv = cmd_args.pop (0)
-        start (services [srv])
-    elif action == "stop":
-        srv = cmd_args.pop (0)
-        stop (services [srv])
+
+    if action in service_actions:
+        srv = services [cmd_args.pop (0)]
+        service_actions [action](srv)
+
+    elif action == "foreach":
+        # Iterate over each service and run the specified action
+        handler = service_actions [cmd_args.pop (0)]
+        for srv in services.values ():
+            try:
+                handler (srv)
+            except Exception as e:
+                print (f"{srv ["name"]}: {e}")
+
     elif action == "backup":
         backup ()
     elif action == "dump-config":
         print (yaml.dump (services))
+
     else:
         raise Exception (f"Invalid action: {action}")
 

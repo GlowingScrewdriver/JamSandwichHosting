@@ -17,6 +17,6 @@ bringup)
     chmod +x ./"$package"
     ;;
 start)
-    ./"$package" ${JSH_ARGS}
+    exec ./"$package" ${JSH_ARGS}
     ;;
 esac

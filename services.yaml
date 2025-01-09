@@ -4,19 +4,18 @@ radicale:
     args: "-C {config}/config --auth-htpasswd-filename {config}/users --storage-filesystem-folder {data}/collections"
 
 caddy:
-    pm: static_bin
-    package: caddy
+    pm: github_release
+    package: caddyserver/caddy
     args: "run --config {config}/Caddyfile"
     env:
-        url: https://caddyserver.com/api/download?os=linux&arch=amd64
+        asset-regex: ".*_linux_amd64.tar.gz"
 
 memos:
-    pm: static_bin
-    package: memos
+    pm: github_release
+    package: GlowingScrewdriver/memos
     args: "--data {data}"
     env:
-        url: https://github.com/GlowingScrewdriver/memos/releases/download/v0.23.0%2Bcustom-subpath/memos_v0.23.0+custom-subpath_linux_amd64.tar.gz
-        extractor: tar -zx
+        asset-regex: ".*_linux_amd64.tar.gz"
 
 ngrok:
     pm: static_bin
@@ -30,6 +29,7 @@ sigal:
     pm: pip
     package: sigal
     args: "build -c {config}/sigal.conf.py {export}/digicam-final1 {data}/output"
+    periodic: "./sigal build -c {config}/sigal.conf.py {export}/nas/share/digicam-final1/'old photos' {data}/output"
     export:
         - ["{data}/output", "sigal"]
 
