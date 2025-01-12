@@ -7,7 +7,7 @@ import json
 from urllib import request
 import re
 from sys import argv
-from os import environ, execl
+from os import environ, execlp, getcwd
 import shutil
 
 def install_latest_release (repo, asset_regex):
@@ -67,5 +67,6 @@ if __name__ == "__main__":
     if action == "bringup":
         install_latest_release (package, environ ["JSH_ENV_asset-regex"])
     elif action == "start":
-        start (package.split ("/")[1], environ ["JSH_ARGS"])
+        environ ["PATH"] = getcwd () + ":" + environ ["PATH"]
+        execlp (*argv [3:])
 

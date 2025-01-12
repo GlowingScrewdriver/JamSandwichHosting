@@ -18,7 +18,6 @@ Additional information is passed through environment variables:
 * `JSH_DATA`: the directory which the service must use to store user data
 * `JSH_CONFIG`: the directory which holds site-specific configuration for
   the service
-* `JSH_ARGS`: command-line arguments to be supplied to the service
 * `JSH_ENV_*`: arbitrary environment variables supplied by the package
   definition; these might be used for package managers that need certain
   information that is not relevant for other package managers

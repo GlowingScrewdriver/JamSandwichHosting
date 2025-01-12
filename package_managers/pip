@@ -8,6 +8,7 @@ alias vPYTHON="exec ${JSH_INSTALL}/venv/bin/python3"
 
 action="$1"
 package="$2"
+shift 2
 
 case "$action" in
 bringup)
@@ -17,7 +18,8 @@ bringup)
     ;;
 start)
     set -x
-    vPYTHON -m "$package" ${JSH_ARGS}
+    export PATH="${PWD}/venv/bin/:${PATH}"
+    exec $@
     set +x
     ;;
 esac

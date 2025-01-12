@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Dummy package manager, for introspection
+# Part of Jam Sandwich Hosting
+
+echo "=== Environment ==="
+set
+echo "==================="
+echo
+
+echo "Command line:"
+echo "   " $@

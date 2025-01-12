@@ -62,6 +62,8 @@ def cmd_run (cmd, workdir, *, pidfile = None, logfile = None, wait = False, env 
         with open (pidfile, "w") as pf:
             pf.write (str(proc.pid))
 
+    return proc.returncode
+
 def env_setup (srv):
     """
     Populate and return a dictionary with environment variables
@@ -78,7 +80,6 @@ def env_setup (srv):
         "JSH_INSTALL": persist,
         "JSH_DATA": data,
         "JSH_CONFIG": config,
-        "JSH_ARGS": srv ["args"].format (**format_args (srv)),
         **{
             f"JSH_ENV_{var}": val
             for var, val in env.items ()
@@ -102,18 +103,18 @@ service_key_shapes = {
     # All valid keys are listed here
     "pm": "",
     "package": "",
-    "args": "",
+    "start-cmd": "",
     "env": {"": ""},
     "export": [["", ""]],
-    "periodic": "",
+    "periodic-cmd": "",
 }
 service_key_defaults = {
     # Mapping: key name -> default value
     # Only optional keys are listed here
-    "args": "",
+    "start-cmd": None,
     "env": {},
-    "export": [],
-    "periodic": "",
+    "export": (),
+    "periodic-cmd": None,
 }
 
 def verify_shape (obj, shape):
@@ -202,7 +203,7 @@ def bringup (srv: dict):
         except FileExistsError:
             pass
 
-    cmd_run (
+    return cmd_run (
         (pm_script, "bringup", srv ["package"]),
         persist_dir,
         wait = True,
