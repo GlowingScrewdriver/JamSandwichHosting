@@ -1,0 +1,55 @@
+[radicale]
+pm = "pip"
+package = "radicale"
+start-cmd = "radicale -C {config}/config --auth-htpasswd-filename {config}/users --storage-filesystem-folder {data}/collections"
+
+[caddy]
+pm = "github_release"
+package = "caddyserver/caddy"
+start-cmd = "caddy run --config {config}/Caddyfile"
+env = {asset-regex = ".*_linux_amd64.tar.gz"}
+
+[memos]
+pm = "github_release"
+package = "GlowingScrewdriver/memos"
+start-cmd = "memos --data {data}"
+env = {asset-regex = ".*_linux_amd64.tar.gz"}
+
+[ngrok]
+pm = "static_bin"
+package = "ngrok"
+start-cmd = "memos start --all --config {config}/ngrok.yml"
+[ngrok.env]
+url = "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz"
+extractor = "tar -zx"
+
+[sigal]
+pm = "pip"
+package = "sigal"
+periodic-cmd = "sigal build -c {config}/sigal.conf.py {export}/nas/share/digicam-final1/'old photos' {data}/output"
+export = [
+    ["{data}/output", "sigal"],
+]
+
+[rclone]
+pm = "static_bin"
+package = "rclone"
+start-cmd = "rclone --config {config}/rclone.conf mount master: {data}/"
+export = [
+    ["{data}/nas/", "nas"]
+]
+[rclone.env]
+url = "https://downloads.rclone.org/rclone-current-linux-amd64.zip"
+extractor = "busybox unzip -p - */rclone"
+
+
+[filebrowser]
+pm = "github_release"
+package = "filebrowser/filebrowser"
+start-cmd = "filebrowser -d {data}/filebrowser.db -r {export}/nas"
+env = {asset-regex = "linux-amd64.*"}
+
+[test]
+pm = "dummy"
+package = "dummypkg"
+start-cmd = "dummypkg --arg1 --arg2 val2"

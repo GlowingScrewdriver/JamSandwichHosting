@@ -3,7 +3,7 @@
 from sys import stdout, argv
 from os import set_inheritable, getcwd, makedirs, path, kill, remove, environ, symlink
 from subprocess import Popen
-import yaml
+import tomllib
 from signal import SIGINT
 from shutil import make_archive
 import shlex
@@ -12,7 +12,7 @@ import shlex
 ## Default constants and macros
 
 ROOTDIR = getcwd ()  # TODO: More robust path handling
-SERVICES_FILE = f"{ROOTDIR}/services.yaml"
+SERVICES_FILE = f"{ROOTDIR}/services.toml"
 PACKAGE_MANAGER = lambda pm: f"{ROOTDIR}/package_managers/{pm}"
 PERSIST_DIR = lambda srv: f"{ROOTDIR}/install/{srv}/"
 CONFIG_DIR = lambda srv: f"{ROOTDIR}/config/{srv}"
@@ -150,8 +150,8 @@ def parse_services (srv_filename: str):
     name to service defintion; the service
     definitions themselves are dicts.
     """
-    with open (srv_filename) as srv_file:
-        services = yaml.safe_load (srv_file)
+    with open (srv_filename, "rb") as srv_file:
+        services = tomllib.load (srv_file)
 
     for name, srv in services.items ():
         # Shape validation
@@ -166,12 +166,10 @@ def parse_services (srv_filename: str):
         for key in service_key_shapes:
             if key in srv:
                 continue
-            dflt = service_key_defaults.get (key)
-            if dflt is None:
-                raise Exception (f"Service {name}: Key {key} is missing")
+            if key in service_key_defaults:
+                srv [key] = service_key_defaults [key]
             else:
-                srv [key] = dflt.copy ()
-
+                raise Exception (f"Service {name}: Key {key} is missing")
         srv ["name"] = name
 
     return services
@@ -218,6 +216,9 @@ def start (srv):
     `srv` is a value in the dict returned
     by `parse_services`.
     """
+    if srv ["start-cmd"] is None:
+        return
+
     srv_name = srv ["name"]
     logfile = LOG_FILE (srv_name)
     persist_dir = PERSIST_DIR (srv_name)
@@ -226,20 +227,17 @@ def start (srv):
     if not path.exists (persist_dir):
         raise Exception (f"{srv_name}: not installed")
 
-    if srv.get ("static"):
-        pidfile_opt = {}
-    else:
-        pidfile = PID_FILE (srv_name)
-        if path.exists (pidfile):
-            raise Exception (f"{srv_name}: already running")
-        pidfile_opt = {"pidfile": pidfile}
+    pidfile = PID_FILE (srv_name)
+    if path.exists (pidfile):
+        raise Exception (f"{srv_name}: already running")
 
-    cmd_run (
-        (pm_script, "start", srv ["package"]),
+    start_cmd = shlex.split (srv ["start-cmd"].format (**format_args (srv)))
+    return cmd_run (
+        (pm_script, "start", srv ["package"], *start_cmd),
         persist_dir,
         logfile = logfile,
         env = env_setup (srv),
-        **pidfile_opt,
+        pidfile = pidfile,
     )
 
 def stop (srv):
@@ -250,9 +248,6 @@ def stop (srv):
     by `parse_services`).
     """
     srv_name = srv ["name"]
-    if srv.get ("static"):
-        print (f"Service {srv_name} is a static service")
-        return
 
     pidfile = PID_FILE (srv_name)
     if not path.exists (pidfile):
@@ -275,6 +270,9 @@ def periodic (srv: dict):
     * Service bringup
     * Periodic actions defined by services
     """
+    if srv ["periodic-cmd"] is None:
+        return
+
     srv_name = srv ["name"]
     pm_script = PACKAGE_MANAGER (srv ["pm"])
     persist_dir = PERSIST_DIR (srv_name)
@@ -329,12 +327,12 @@ def main ():
             try:
                 handler (srv)
             except Exception as e:
-                print (f"{srv ["name"]}: {e}")
+                print (srv ["name"], e)
 
     elif action == "backup":
         backup ()
     elif action == "dump-config":
-        print (yaml.dump (services))
+        print (services)
 
     else:
         raise Exception (f"Invalid action: {action}")
