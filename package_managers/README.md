@@ -21,3 +21,10 @@ Additional information is passed through environment variables:
 * `JSH_ENV_*`: arbitrary environment variables supplied by the package
   definition; these might be used for package managers that need certain
   information that is not relevant for other package managers
+
+
+### Introspection
+There is a package manager, `dummy`, and a package using it, `test`.
+This package manager is a script that simply prints its command line and
+environment upon invocation; it can be used to inspect the execution
+environment, and may help with debugging.

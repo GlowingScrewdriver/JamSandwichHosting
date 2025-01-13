@@ -1,18 +1,20 @@
 #!/bin/env python3
 
 from sys import stdout, argv
-from os import set_inheritable, getcwd, makedirs, path, kill, remove, environ, symlink
+from os import set_inheritable, getcwd, makedirs, path, kill, remove, environ, symlink, listdir
 from subprocess import Popen
 import tomllib
 from signal import SIGINT
 from shutil import make_archive
 import shlex
+import json
 
 
 ## Default constants and macros
 
 ROOTDIR = getcwd ()  # TODO: More robust path handling
 SERVICES_FILE = f"{ROOTDIR}/services.toml"
+SERVICE_FRAGMENT_DIR = f"{ROOTDIR}/services.toml.d"
 PACKAGE_MANAGER = lambda pm: f"{ROOTDIR}/package_managers/{pm}"
 PERSIST_DIR = lambda srv: f"{ROOTDIR}/install/{srv}/"
 CONFIG_DIR = lambda srv: f"{ROOTDIR}/config/{srv}"
@@ -32,6 +34,7 @@ REQUIRED_FILES = (
     PACKAGE_MANAGER (""),
     SERVICES_FILE,
 )
+
 
 ## Program execution
 
@@ -294,8 +297,20 @@ def periodic (srv: dict):
 ## Entry point
 
 def main ():
+    # Main service definition file
     services = parse_services (SERVICES_FILE)
-    cmd_args = argv [1:]
+    # Fragments for one-off local definitions and overrides
+    try:
+        fragments = (
+            f"{SERVICE_FRAGMENT_DIR}/{diry}"
+            for diry in listdir (SERVICE_FRAGMENT_DIR)
+        )
+    except FileNotFoundError:
+        fragments = ()
+    for frag in fragments:
+        frag_services = parse_services (frag)
+        services.update (frag_services)
+
 
     for diry in REQUIRED_FILES:
         if not path.exists (diry):
@@ -315,8 +330,8 @@ def main ():
         "periodic": periodic,
     }
 
+    cmd_args = argv [1:]
     action = cmd_args.pop (0)
-
     if action in service_actions:
         srv = services [cmd_args.pop (0)]
         service_actions [action](srv)
@@ -333,7 +348,7 @@ def main ():
     elif action == "backup":
         backup ()
     elif action == "dump-config":
-        print (services)
+        json.dump (services, stdout)
 
     else:
         raise Exception (f"Invalid action: {action}")
