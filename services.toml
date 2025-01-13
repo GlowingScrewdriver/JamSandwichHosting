@@ -26,7 +26,7 @@ extractor = "tar -zx"
 [sigal]
 pm = "pip"
 package = "sigal"
-periodic-cmd = "sigal build -c {config}/sigal.conf.py {export}/nas/share/digicam-final1/'old photos' {data}/output"
+periodic-cmd = "sigal build -c {config}/sigal.conf.py {export}/nas/Photos/canonical/ {data}/output"
 export = [
     ["{data}/output", "sigal"],
 ]
@@ -34,7 +34,7 @@ export = [
 [rclone]
 pm = "static_bin"
 package = "rclone"
-start-cmd = "rclone --config {config}/rclone.conf mount master: {data}/"
+start-cmd = "rclone --config {config}/rclone.conf mount master: {data}/ --read-only"
 export = [
     ["{data}/nas/", "nas"]
 ]

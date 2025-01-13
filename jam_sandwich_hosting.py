@@ -284,14 +284,13 @@ def periodic (srv: dict):
     if not path.exists (persist_dir):
         raise Exception (f"{srv_name}: not installed")
 
-    cmd = srv ["periodic"]
-    if cmd:
-        cmd_run (
-            shlex.split (cmd.format (**format_args (srv))),
-            persist_dir,
-            env = env_setup (srv),
-            wait = True
-        )
+    periodic_cmd = shlex.split (srv ["periodic-cmd"].format (**format_args (srv)))
+    cmd_run (
+        (pm_script, "start", srv ["package"], *periodic_cmd),
+        persist_dir,
+        env = env_setup (srv),
+        wait = True
+    )
 
 
 ## Entry point
