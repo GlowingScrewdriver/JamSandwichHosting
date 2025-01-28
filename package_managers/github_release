@@ -58,9 +58,6 @@ def install_latest_release (repo, asset_regex):
     with open ("version", "w") as version_file:
         version_file.write (rel_version)
 
-def start (repo, argstr):
-    execl (repo, repo, *argstr.split (" "))
-
 if __name__ == "__main__":
     action, package = argv [1:3]
 
@@ -68,5 +65,5 @@ if __name__ == "__main__":
         install_latest_release (package, environ ["JSH_ENV_asset-regex"])
     elif action == "start":
         environ ["PATH"] = getcwd () + ":" + environ ["PATH"]
-        execlp (*argv [3:])
+        execlp (argv [3], *argv [3:])
 

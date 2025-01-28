@@ -18,7 +18,7 @@ env = {asset-regex = ".*_linux_amd64.tar.gz"}
 [ngrok]
 pm = "static_bin"
 package = "ngrok"
-start-cmd = "memos start --all --config {config}/ngrok.yml"
+start-cmd = "ngrok start --all --config {config}/ngrok.yml"
 [ngrok.env]
 url = "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz"
 extractor = "tar -zx"
